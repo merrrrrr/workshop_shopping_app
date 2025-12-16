@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:workshop_shopping_app/data/cart_items.dart';
+import 'package:provider/provider.dart';
 import 'package:workshop_shopping_app/models/item.dart';
 import 'package:workshop_shopping_app/models/product.dart';
+import 'package:workshop_shopping_app/providers/cart_provider.dart';
 import 'package:workshop_shopping_app/widgets/quantity_selector.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -127,6 +128,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
+								final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
                 // Create new item from current product
                 final newItem = Item(
                   productId: widget.product.id!,
@@ -136,26 +139,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   quantity: quantity,
                 );
 
-                // If item already exists in cart, override the item with new quantity
-                if (cartItems.any((item) => item.productId == newItem.productId)) {
-                  final existingItemIndex = cartItems.indexWhere((item) => item.productId == newItem.productId);
-                  setState(() {
-                    final existingItem = cartItems[existingItemIndex];
-                    cartItems[existingItemIndex] = Item(
-                      productId: existingItem.productId,
-                      productName: existingItem.productName,
-                      imageUrl: existingItem.imageUrl,
-                      price: existingItem.price,
-                      quantity: existingItem.quantity + quantity,
-                    );
-                  });
-
-                  // Else, add new item into cart
-                } else {
-                  setState(() {
-                    cartItems.add(newItem);
-                  });
-                }
+                cartProvider.addItem(newItem);
 
                 // Notify user
                 ScaffoldMessenger.of(context).showSnackBar(

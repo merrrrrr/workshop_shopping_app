@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "811832318530",
+    "project_id": "workshop-shopping-app-51233",
+    "storage_bucket": "workshop-shopping-app-51233.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:811832318530:android:c2de51af345fe8595d2bdb",
+        "android_client_info": {
+          "package_name": "com.example.workshop_shopping_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4VkbX7RUcYw5cYWdVnXSijoMbOfnbMIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

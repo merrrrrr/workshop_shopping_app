@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:workshop_shopping_app/data/product_data.dart';
 import 'package:workshop_shopping_app/models/product.dart';
 import 'package:workshop_shopping_app/pages/product_details_page.dart';
+import 'package:workshop_shopping_app/services/product_service.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -12,19 +12,44 @@ class ProductsPage extends StatefulWidget {
 
 class _ProductsPageState extends State<ProductsPage> {
   final TextEditingController searchBarController = TextEditingController();
-  List<Product> _filteredProducts = products;
+  List<Product> _filteredProducts = [];
+	List<Product> _allProducts = [];
+
+	final _productService = ProductService();
+
+	Future<void> _loadProduct() async {
+		try {
+			final products = await _productService.getAllProducts();
+			setState(() {
+			  _allProducts = products;
+				_filteredProducts = products;
+			});
+		} catch (e) {
+			if (context.mounted) {
+				ScaffoldMessenger.of(context).showSnackBar(
+					SnackBar(content: Text("Failed to load products: $e"))
+				);
+			}
+		}
+	}
 
   void _filterProducts(String query) {
     setState(() {
       if (query.isEmpty) {
-        _filteredProducts = products;
+        _filteredProducts = _allProducts;
       } else {
-        _filteredProducts = products.where((product) {
+        _filteredProducts = _allProducts.where((product) {
           return product.name.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
   }
+
+	@override
+	void initState() {
+		super.initState();
+		_loadProduct();
+	}
 
   @override
   Widget build(BuildContext context) {

@@ -1,126 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:workshop_shopping_app/data/cart_items.dart';
-import 'package:workshop_shopping_app/data/order_data.dart';
-import 'package:workshop_shopping_app/data/user_data.dart';
-import 'package:workshop_shopping_app/models/item.dart';
-import 'package:workshop_shopping_app/models/order.dart';
+import 'package:provider/provider.dart';
+import 'package:workshop_shopping_app/providers/cart_provider.dart';
+import 'package:workshop_shopping_app/services/order_service.dart';
 import 'package:workshop_shopping_app/widgets/quantity_selector.dart';
-import 'package:uuid/uuid.dart';
 
-class CartPage extends StatefulWidget {
+class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
-  @override
-  State<CartPage> createState() => _CartPageState();
-}
-
-class _CartPageState extends State<CartPage> {
-  void _incrementQuantity(int index) {
-    setState(() {
-      final item = cartItems[index];
-      cartItems[index] = Item(
-        productId: item.productId,
-        productName: item.productName,
-        imageUrl: item.imageUrl,
-        price: item.price,
-        quantity: item.quantity + 1,
-      );
-    });
-  }
-
-  void _decrementQuantity(int index) {
-    setState(() {
-      final item = cartItems[index];
-      cartItems[index] = Item(
-        productId: item.productId,
-        productName: item.productName,
-        imageUrl: item.imageUrl,
-        price: item.price,
-        quantity: item.quantity - 1,
-      );
-    });
-  }
-
-  void _deleteItem(int index) {
-    setState(() {
-      cartItems.removeAt(index);
-    });
-  }
-
-  double _calculateTotal() {
-    double total = 0;
-    for (var item in cartItems) {
-      total += item.price * item.quantity;
-    }
-    return total;
-  }
-
-  void _checkout() {
-    // Create random orderId
-    final orderId = const Uuid().v4();
-
-    // Add new order into orders list
-    orders.add(
-        Order(
-          id: orderId,
-          userId: user.name,
-          items: List<Item>.from(cartItems),
-          totalAmount: _calculateTotal(),
-          shippingAddress: user.address,
-          createdAt: DateTime.now(),
-        )
-    );
-
-    // Remove all items in cartItems list
-    cartItems.clear();
-
-    // Notify user
-    if (!context.mounted) return;
-    showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text('Checkout Successful'),
-            content: Text('Order placed successfully! Order ID: ${orderId.substring(0, 8)}'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text("OK"),
-              ),
-            ],
-          );
-        }
-    );
-
-    // Refresh page
-    setState(() {});
-  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text("Shopping Cart")
+          title: const Text("Cart")
       ),
 
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: cartItems.length,
-              itemBuilder: (context, index) {
-                return _buildCartItemCard(context, index);
-              },
-            ),
-          ),
-          _buildCheckoutBar(context),
-        ],
-      ),
+      body: Consumer<CartProvider>(
+				builder: (context, cartProvider, child) {
+				  return Column(
+						children: [
+							Expanded(
+								child: ListView.builder(
+									itemCount: cartProvider.cartItems.length,
+									itemBuilder: (context, index) {
+										return _buildCartItemCard(context, index, cartProvider);
+									},
+								),
+							),
+							_buildCheckoutBar(context, cartProvider),
+						],
+					);
+				},
+				
+			),
     );
   }
 
-  Widget _buildCartItemCard(BuildContext context, int index) {
-    final cartItem = cartItems[index];
+  Widget _buildCartItemCard(BuildContext context, int index, CartProvider cartProvider) {
+    final cartItem = cartProvider.cartItems[index];
     final quantity = cartItem.quantity;
 
     return Card(
@@ -136,7 +53,7 @@ class _CartPageState extends State<CartPage> {
             extentRatio: 0.35,
             children: [
               SlidableAction(
-                onPressed: (context) => _deleteItem(index),
+                onPressed: (context) => cartProvider.deleteItem(index),
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
                 icon: Icons.delete,
@@ -197,8 +114,8 @@ class _CartPageState extends State<CartPage> {
                         // Quantity Selector
                         QuantitySelector(
                           quantity: quantity,
-                          onIncrement: () => _incrementQuantity(index),
-                          onDecrement: () => _decrementQuantity(index),
+                          onIncrement: () => cartProvider.updateQuantity(index, quantity + 1),
+                          onDecrement: () => cartProvider.updateQuantity(index, quantity - 1),
                         )
                       ],
                     ),
@@ -212,7 +129,7 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _buildCheckoutBar(BuildContext context) {
+  Widget _buildCheckoutBar(BuildContext context, CartProvider cartProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.white,
@@ -221,16 +138,37 @@ class _CartPageState extends State<CartPage> {
         children: [
           // Total Amount
           Text(
-            "Total: RM ${_calculateTotal().toStringAsFixed(2)}",
+            "Total: RM ${OrderService().calculateTotal(cartProvider.cartItems).toStringAsFixed(2)}",
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
 
-          // Checkout Button
+                    // Checkout Button
           ElevatedButton(
-            onPressed: cartItems.isEmpty ? null : _checkout,
+            onPressed: cartProvider.cartItems.isEmpty ? null : () async {
+							final orderId = await cartProvider.checkout();
+							cartProvider.clearCart();
+
+							if (!context.mounted) return;
+							
+              showDialog(
+								context: context,
+								builder: (context) {
+									return AlertDialog(
+										title: Text('Checkout Successful'),
+										content: Text('Order placed successfully! Order ID: ${orderId.substring(0, 8)}'),
+										actions: [
+											TextButton(
+												onPressed: () => Navigator.of(context).pop(),
+												child: Text("OK"),
+											),
+										],
+									);
+								}
+							);
+            },
             child: const Text("Checkout"),
           )
         ],
